@@ -1,17 +1,83 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 const AddItemModal = ({ isOpen, onClose }) => {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const uploadImage = async (file) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from("item-images")
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("item-images").getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // 여기에 상품 등록 로직 추가
-    console.log({ title, price, description, image });
-    onClose();
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 현재 로그인한 사용자 정보 가져오기
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("로그인이 필요합니다.");
+
+      // 이미지 업로드
+      let imageUrl = null;
+      if (image) {
+        imageUrl = await uploadImage(image);
+      }
+
+      // 상품 데이터 저장
+      const { data, error } = await supabase
+        .from("items")
+        .insert([
+          {
+            title,
+            price: parseInt(price),
+            description,
+            image_url: imageUrl,
+            user_id: user.id,
+            location: "서울", // 기본값 또는 사용자 위치
+            likes: 0,
+            comments: 0,
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      // 성공적으로 저장되면 모달 닫기
+      onClose();
+
+      // 폼 초기화
+      setTitle("");
+      setPrice("");
+      setDescription("");
+      setImage(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -27,6 +93,10 @@ const AddItemModal = ({ isOpen, onClose }) => {
         </button>
 
         <h2 className="text-xl font-bold mb-6">물건 등록하기</h2>
+
+        {error && (
+          <div className="bg-red-500 text-white p-3 rounded mb-4">{error}</div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -73,9 +143,10 @@ const AddItemModal = ({ isOpen, onClose }) => {
 
           <button
             type="submit"
+            disabled={loading}
             className="btn btn-primary w-full text-white py-2 rounded-md transition-colors"
           >
-            등록하기
+            {loading ? "등록 중..." : "등록하기"}
           </button>
         </form>
       </div>
