@@ -2,7 +2,7 @@ import { Bell, Search } from "lucide-react";
 
 const MarketHeader = () => {
   return (
-    <header className="fixed top-0 z-50 w-full bg-black text-white">
+    <header className="sticky top-0 z-50 w-full bg-black text-white">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* 좌측: 동 선택 */}
