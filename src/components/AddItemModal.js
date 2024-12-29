@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AddItemModal = ({ isOpen, onClose }) => {
   const [title, setTitle] = useState("");
@@ -9,6 +10,7 @@ const AddItemModal = ({ isOpen, onClose }) => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
 
   const uploadImage = async (file) => {
     const fileExt = file.name.split(".").pop();
@@ -66,6 +68,7 @@ const AddItemModal = ({ isOpen, onClose }) => {
       if (error) throw error;
 
       // 성공적으로 저장되면 모달 닫기
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       onClose();
 
       // 폼 초기화

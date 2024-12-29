@@ -3,7 +3,7 @@ const ItemCard = ({ item }) => {
     <div className="flex gap-4 p-4 border-b border-gray-800">
       <div className="w-20 h-20 rounded-md overflow-hidden">
         <img 
-          src={item.image} 
+          src={item.image_url} 
           alt={item.title} 
           className="w-full h-full object-cover"
         />
