@@ -46,6 +46,29 @@ async function checkLikeStatus(itemId, userId) {
   }
 }
 
+async function incrementViews(id) {
+  try {
+    // 현재 아이템의 조회수를 가져옴
+    const { data: currentItem, error: fetchError } = await supabase
+      .from("items")
+      .select("views")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // 조회수 증가
+    const { error: updateError } = await supabase
+      .from("items")
+      .update({ views: (currentItem.views || 0) + 1 })
+      .eq("id", id);
+
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error("조회수 증가 중 에러:", error);
+  }
+}
+
 export default function ItemDetail({ params }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -67,7 +90,16 @@ export default function ItemDetail({ params }) {
       }
     };
     fetchUser();
-  }, [resolvedParams.id]);
+
+    // 조회수 증가 후 쿼리 무효화
+    const updateViewCount = async () => {
+      await incrementViews(resolvedParams.id);
+      // 쿼리 무효화하여 데이터 새로고침
+      queryClient.invalidateQueries(["item", resolvedParams.id]);
+    };
+
+    updateViewCount();
+  }, [resolvedParams.id, queryClient]);
 
   const {
     data: item,
