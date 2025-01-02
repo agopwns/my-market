@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { ArrowLeft, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import Comments from "@/components/Comments";
 
 async function fetchItem(id) {
   const { data, error } = await supabase
@@ -198,6 +199,12 @@ export default function ItemDetail({ params }) {
         <div className="text-gray-400">
           조회 {item.views || 0} · 관심 {item.likes} · 댓글 {item.comments}
         </div>
+      </div>
+
+      {/* 댓글 섹션 */}
+      <div className="p-4 pb-20">
+        <h2 className="text-xl font-bold mb-4">댓글</h2>
+        <Comments itemId={resolvedParams.id} />
       </div>
 
       {/* 하단 고정 버튼 */}
