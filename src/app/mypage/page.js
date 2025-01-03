@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("likes"); // 'likes' 또는 'sales'
 
   useEffect(() => {
     async function getUser() {
@@ -24,7 +26,6 @@ export default function MyPage() {
         }
         setUser(user);
 
-        // 프로필 정보 가져오기
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -43,6 +44,51 @@ export default function MyPage() {
 
     getUser();
   }, [router]);
+
+  // 관심 목록 조회
+  const { data: likedItems } = useQuery({
+    queryKey: ["likedItems", user?.id],
+    queryFn: async () => {
+      // 먼저 사용자가 좋아요한 아이템 ID들을 가져옵니다
+      const { data: likedItemIds, error: likesError } = await supabase
+        .from("likes")
+        .select("item_id")
+        .eq("user_id", user.id);
+
+      if (likesError) throw likesError;
+
+      // 가져온 ID들을 배열로 변환
+      const itemIds = likedItemIds.map((like) => like.item_id);
+
+      // 해당 ID들에 해당하는 아이템들을 조회
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .in("id", itemIds)
+        .neq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // 판매 목록 조회
+  const { data: salesItems } = useQuery({
+    queryKey: ["salesItems", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const handleLocationChange = async (e) => {
     const newLocation = e.target.value;
@@ -119,6 +165,79 @@ export default function MyPage() {
             <option value="samsung2">삼성2동</option>
             <option value="cheongdam">청담동</option>
           </select>
+        </div>
+
+        {/* 탭 메뉴 */}
+        <div className="flex border-b border-zinc-800">
+          <button
+            className={`flex-1 py-2 text-center ${
+              activeTab === "likes"
+                ? "border-b-2 border-primary text-primary"
+                : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("likes")}
+          >
+            관심 목록
+          </button>
+          <button
+            className={`flex-1 py-2 text-center ${
+              activeTab === "sales"
+                ? "border-b-2 border-primary text-primary"
+                : "text-gray-400"
+            }`}
+            onClick={() => setActiveTab("sales")}
+          >
+            판매 목록
+          </button>
+        </div>
+
+        {/* 아이템 목록 */}
+        <div className="space-y-4">
+          {activeTab === "likes" &&
+            likedItems?.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => router.push(`/items/${item.id}`)}
+                className="flex gap-4 p-4 bg-zinc-800 rounded-lg cursor-pointer"
+              >
+                <div className="w-20 h-20 rounded-md overflow-hidden">
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-medium">{item.title}</h3>
+                  <p className="text-gray-400">
+                    {item.price.toLocaleString()}원
+                  </p>
+                </div>
+              </div>
+            ))}
+
+          {activeTab === "sales" &&
+            salesItems?.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => router.push(`/items/${item.id}`)}
+                className="flex gap-4 p-4 bg-zinc-800 rounded-lg cursor-pointer"
+              >
+                <div className="w-20 h-20 rounded-md overflow-hidden">
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-medium">{item.title}</h3>
+                  <p className="text-gray-400">
+                    {item.price.toLocaleString()}원
+                  </p>
+                </div>
+              </div>
+            ))}
         </div>
 
         <button onClick={handleSignOut} className="btn btn-error w-full">
