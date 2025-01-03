@@ -102,6 +102,52 @@ export default function ItemDetail({ params }) {
     updateViewCount();
   }, [resolvedParams.id, queryClient]);
 
+  const handleStartChat = async () => {
+    if (!userId) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      // 이미 존재하는 채팅방 확인
+      const { data: existingRoom, error: findError } = await supabase
+        .from("chat_rooms")
+        .select("id")
+        .eq("item_id", resolvedParams.id)
+        .eq("buyer_id", userId)
+        .single();
+
+      if (findError && findError.code !== "PGRST116") {
+        throw findError;
+      }
+
+      if (existingRoom) {
+        router.push(`/chat/${existingRoom.id}`);
+        return;
+      }
+
+      // 새 채팅방 생성
+      const { data: newRoom, error: createError } = await supabase
+        .from("chat_rooms")
+        .insert([
+          {
+            item_id: resolvedParams.id,
+            seller_id: item.user_id,
+            buyer_id: userId,
+          },
+        ])
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      router.push(`/chat/${newRoom.id}`);
+    } catch (error) {
+      console.error("채팅방 생성 중 오류:", error);
+      alert("채팅방을 생성할 수 없습니다.");
+    }
+  };
+
   const {
     data: item,
     isLoading,
@@ -219,7 +265,12 @@ export default function ItemDetail({ params }) {
           >
             <Heart className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`} />
           </button>
-          <button className="btn btn-primary flex-1">채팅하기</button>
+          <button
+            onClick={() => handleStartChat(userId, resolvedParams, item)}
+            className="btn btn-primary flex-1"
+          >
+            채팅하기
+          </button>
         </div>
       </div>
     </div>
