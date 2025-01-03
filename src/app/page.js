@@ -8,15 +8,24 @@ import AddItemModal from "@/components/AddItemModal";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("default");
+
+  const handleLocationChange = (location) => {
+    setSelectedLocation(location);
+  };
 
   return (
     <div className="">
-      <MarketHeader />
-      <ItemList />
+      <MarketHeader
+        selectedLocation={selectedLocation}
+        onLocationChange={handleLocationChange}
+      />
+      <ItemList selectedLocation={selectedLocation} />
       <AddItemButton onClick={() => setIsModalOpen(true)} />
       <AddItemModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        selectedLocation={selectedLocation}
       />
       <NavigationBar />
     </div>

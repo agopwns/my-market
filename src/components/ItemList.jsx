@@ -2,12 +2,13 @@
 import { useQuery } from '@tanstack/react-query'
 import ItemCard from './ItemCard'
 import { fetchItems } from '@/lib/api'
+import { useState } from 'react'
 
-const ItemList = () => {
+const ItemList = ({ selectedLocation }) => {
   const { data: items, isLoading, error } = useQuery({
-    queryKey: ['items'],
-    queryFn: fetchItems
-  })
+    queryKey: ["items", selectedLocation],
+    queryFn: () => fetchItems(selectedLocation)
+  });
 
   if (isLoading) {
     return (

@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import SearchModal from "./SearchModal";
 import NotificationList from "./NotificationList";
 
-const MarketHeader = () => {
+const MarketHeader = ({ selectedLocation, onLocationChange }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -68,22 +68,47 @@ const MarketHeader = () => {
     enabled: !!userId,
   });
 
+  const { data: locations } = useQuery({
+    queryKey: ["locations_query"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("unique_locations")
+        .select("*");
+
+      if (error) {
+        console.error("Location query error:", error);
+        throw error;
+      }
+
+      return data;
+    },
+  });
+
+  const handleLocationChange = (e) => {
+    onLocationChange(e.target.value);
+    // React Query의 queryClient를 사용하여 items 쿼리 무효화
+    queryClient.invalidateQueries(["items"]);
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-zinc-900 text-white border-b border-zinc-800">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* 좌측: 동 선택 */}
             <div className="w-20">
-              <select className="bg-black w-full" defaultValue="default">
+              <select
+                className="bg-black w-full"
+                value={selectedLocation}
+                onChange={handleLocationChange}
+              >
                 <option value="default" disabled>
                   동네 선택
                 </option>
-                <option value="yeoksam1">역삼1동</option>
-                <option value="yeoksam2">역삼2동</option>
-                <option value="samsung1">삼성1동</option>
-                <option value="samsung2">삼성2동</option>
-                <option value="cheongdam">청담동</option>
+                {locations?.map((location) => (
+                  <option key={location.id} value={location.location}>
+                    {location.location}
+                  </option>
+                ))}
               </select>
             </div>
 
