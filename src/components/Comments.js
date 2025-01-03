@@ -54,20 +54,48 @@ export default function Comments({ itemId }) {
     mutationFn: async (newComment) => {
       if (!userId) throw new Error("로그인이 필요합니다.");
 
-      const { error } = await supabase.from("comments").insert([
-        {
-          content: newComment,
-          item_id: itemId,
-          user_id: userId,
-        },
-      ]);
+      // 댓글 작성
+      const { data: commentData, error: commentError } = await supabase
+        .from("comments")
+        .insert([
+          {
+            content: newComment,
+            item_id: itemId,
+            user_id: userId,
+          },
+        ])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (commentError) throw commentError;
+
+      // 게시글 작성자 확인
+      const { data: itemData, error: itemError } = await supabase
+        .from("items")
+        .select("user_id")
+        .eq("id", itemId)
+        .single();
+
+      if (itemError) throw itemError;
+
+      // 자신의 글이 아닌 경우에만 알림 생성
+      if (itemData.user_id !== userId) {
+        const { error: notificationError } = await supabase
+          .from("notifications")
+          .insert([
+            {
+              user_id: itemData.user_id,
+              item_id: itemId,
+              comment_id: commentData.id,
+            },
+          ]);
+
+        if (notificationError) throw notificationError;
+      }
     },
     onSuccess: () => {
       setContent("");
       queryClient.invalidateQueries(["comments", itemId]);
-      // items 테이블의 comments 카운트도 업데이트
       queryClient.invalidateQueries(["item", itemId]);
     },
     onError: (error) => {
